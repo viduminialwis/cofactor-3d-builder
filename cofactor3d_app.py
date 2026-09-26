@@ -334,6 +334,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        port = self.server.server_address[1]
+        if self.headers.get("Host", "") not in {f"127.0.0.1:{port}", f"localhost:{port}"}:
+            return self._send(403, "{}")
         if self.path.split("?")[0] in ("/", "/index.html"):
             with open(os.path.join(HERE, "index.html"), encoding="utf-8") as fh:
                 html = fh.read().replace("__DEFAULT_OUT__", html_escape(DEFAULT_OUT))
@@ -341,7 +344,22 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send(404, "{}")
 
+    def _from_own_page(self):
+        """Only accept requests from this tool's own page. Blocks other websites open in
+        the same browser from calling the tool (cross-site requests, DNS rebinding)."""
+        port = self.server.server_address[1]
+        allowed = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        if self.headers.get("Host", "") not in allowed:
+            return False
+        origin = self.headers.get("Origin")
+        if origin and origin not in {"http://" + h for h in allowed}:
+            return False
+        # a JSON content type forces browsers to ask permission (CORS preflight) first
+        return self.headers.get("Content-Type", "").startswith("application/json")
+
     def do_POST(self):
+        if not self._from_own_page():
+            return self._send(403, json.dumps({"ok": False, "error": "Request refused."}))
         try:
             n = int(self.headers.get("Content-Length", 0))
             req = json.loads(self.rfile.read(n).decode() or "{}")

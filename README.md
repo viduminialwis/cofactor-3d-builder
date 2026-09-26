@@ -68,12 +68,19 @@ Files are saved to `Documents\Ligands_3D` by default. To change this, create a `
 3. Each conformer is optimised with **MMFF94**, or UFF if MMFF94 parameters are missing.
 4. The **lowest-energy conformer** is written as SDF and PDB.
 
+**Method references:**
+- ETKDG: Riniker S, Landrum GA (2015). *J Chem Inf Model* 55:2562–2574.
+- ETKDGv3: Wang S, Witek J, Landrum GA, Riniker S (2020). *J Chem Inf Model* 60:2044–2058.
+- MMFF94: Halgren TA (1996). *J Comput Chem* 17:490–519.
+
 Example Methods sentence (please adapt it to your settings):
 
 > Three-dimensional structures of the cofactors were obtained from PubChem isomeric SMILES and generated with RDKit (version X) using the ETKDGv3 algorithm (10 conformers, random seed 42), followed by MMFF94 geometry optimisation. The lowest-energy conformer was used for docking.
 
 ## Limitations
 
+- **Testing:** tested on Windows 11 with Python 3.14 and RDKit 2026.03. Mac and Linux should work but have not been tested yet; please report any problems.
+- **Privacy:** the tool runs only on your own computer (`127.0.0.1`) and only accepts requests from its own page. Nothing you draw or upload is sent anywhere, except a **name search**, which sends the name you type to PubChem.
 - **Metal-containing cofactors** (heme, Fe–S clusters, di-iron centres) cannot be built reliably. Take them from an experimental structure in the [PDB](https://www.rcsb.org/).
 - **Protonation state:** PubChem SMILES are usually neutral (e.g. phosphates drawn as –OH). The tool does not protonate for a particular pH, so prepare the charge state in your docking software if you need to, and report it.
 - A single minimised gas-phase conformer is a starting point. Docking programs such as Vina still treat rotatable bonds as flexible.
