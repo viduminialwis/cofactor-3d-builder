@@ -6,6 +6,18 @@ Type a name such as *FAD*, *NADPH* or *hexadecane*, paste a SMILES, or upload a 
 
 ![Cofactor 3D Builder screenshot](docs/screenshot.png)
 
+## 🚀 Quick start (Windows, 3 steps, no coding)
+
+| Step | What to do | How often |
+|---|---|---|
+| **1** | Install **Python** from [python.org/downloads](https://www.python.org/downloads/). ⚠️ On the first installer screen, **tick "Add python.exe to PATH"**. | once |
+| **2** | **[⬇️ Download the tool (ZIP)](https://github.com/viduminialwis/cofactor-3d-builder/archive/refs/heads/main.zip)**, right-click the ZIP and choose **Extract All**, then open the folder and double-click **`Install first time.bat`**. Wait until it says *Done!* | once |
+| **3** | Double-click **`Start Cofactor 3D.bat`**. The tool opens in your web browser. | every time |
+
+Keep the black window open while you use the tool, and close it when you have finished. Your 3D files are saved in **`Documents\Ligands_3D`**.
+
+Something not working? See [Troubleshooting](#troubleshooting).
+
 ## Why this tool?
 
 Building 3D ligands from SMILES with a script is quick, but it is easy to get wrong without noticing:
@@ -26,21 +38,16 @@ Building 3D ligands from SMILES with a script is quick, but it is easy to get wr
 - Optional multi-conformer SDF for ensemble docking
 - `generation_log.csv` recording every structure you make
 
-## Installation (Windows, no coding)
+## Installation on Mac / Linux
 
-1. **Install Python** from [python.org/downloads](https://www.python.org/downloads/). During installation, **tick "Add python.exe to PATH"**.
-2. On this page, click the green **Code** button, then **Download ZIP**, and unzip it anywhere.
-3. Double-click **`Install first time.bat`** (only once). This installs RDKit and needs internet.
-4. Double-click **`Start Cofactor 3D.bat`**. A black window opens; **keep it open**. The tool opens in your browser. If it doesn't, go to <http://127.0.0.1:8765>.
-
-Close the black window when you have finished.
-
-### Mac / Linux
+Open a Terminal inside the downloaded folder and run:
 
 ```bash
 pip install -r requirements.txt
 python cofactor3d_app.py
 ```
+
+The tool opens in your browser. If it doesn't, go to <http://127.0.0.1:8765>.
 
 ## How to use
 
@@ -71,6 +78,20 @@ Example Methods sentence (please adapt it to your settings):
 - **Protonation state:** PubChem SMILES are usually neutral (e.g. phosphates drawn as –OH). The tool does not protonate for a particular pH, so prepare the charge state in your docking software if you need to, and report it.
 - A single minimised gas-phase conformer is a starting point. Docking programs such as Vina still treat rotatable bonds as flexible.
 - The name search needs internet access to PubChem; the 3D preview needs internet to load 3Dmol.js. Building and saving work offline with SMILES or files.
+
+## Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| *"Python was not found"* | Install Python (Quick start step 1) and make sure **"Add python.exe to PATH"** is ticked. If you already installed it without ticking, run the installer again, choose **Modify**, and tick it. |
+| The black window says *"No module named rdkit"* | Run **`Install first time.bat`** first, and check that it ends with *Done!* |
+| Windows shows *"Windows protected your PC"* | Click **More info**, then **Run anyway**. The `.bat` files are plain text, and you can open them in Notepad to see exactly what they do. |
+| The browser did not open | Leave the black window open, and type <http://127.0.0.1:8765> in your browser's address bar. |
+| *"Lost contact with the tool"* on the web page | The black window was closed. Double-click `Start Cofactor 3D.bat` again. |
+| *"Could not reach PubChem"* | Check your internet connection and try again in a minute (PubChem is sometimes busy), or paste the SMILES instead. |
+| The tool refuses because of *undefined stereocentres* | This protects you from docking a random isomer. Use **Search by name**, or copy the SMILES from PubChem. For molecules without stereocentres (e.g. alkanes), tick **Advanced settings → Allow undefined stereo**. |
+| No 3D preview appears | The preview needs internet. Your SDF/PDB files are still created. |
+| Something else | The error is saved in `error_log.txt` in the tool folder. Please [open an issue](https://github.com/viduminialwis/cofactor-3d-builder/issues) and attach it. |
 
 ## Citation
 
