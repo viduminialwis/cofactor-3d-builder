@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this tool in your research, please cite it as below."
+title: "Cofactor 3D Builder: a no-code tool to prepare 3D cofactor and ligand structures for molecular docking"
+type: software
+authors:
+  - family-names: Alwis
+    given-names: Vidumini
+    orcid: "https://orcid.org/0009-0004-6155-2295"
+    affiliation: "Department of Zoology and Environment Sciences, University of Colombo, Sri Lanka"
+version: 1.0.0
+date-released: 2026-09-26
+license: MIT
+keywords:
+  - molecular docking
+  - cofactor
+  - RDKit
+  - conformer generation
+  - ligand preparation

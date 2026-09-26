@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cofactor 3D Builder</title>
+<script src="https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js"></script>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1c2330; --muted: #5d6778; --line: #dde2ea;
+    --accent: #0f6e6e; --accent-ink: #ffffff; --accent-soft: #e3f1f0;
+    --warn-bg: #fff6e0; --warn-line: #e8b93c; --err-bg: #fdecec; --err-line: #d9534f;
+    --ok-bg: #e8f5ec; --ok-line: #3c9a5f; --code: #f0f2f5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
+  header h1 { margin: 0 0 4px; font-size: 24px; }
+  header p { margin: 0 0 20px; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+  .step { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: var(--accent);
+          color: var(--accent-ink); align-items: center; justify-content: center; font-size: 13px;
+          margin-right: 8px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tab { border: 1px solid var(--line); background: var(--bg); padding: 8px 14px; border-radius: 8px;
+         cursor: pointer; font: inherit; color: var(--ink); }
+  .tab.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .pane { display: none; } .pane.active { display: block; }
+  label { display: block; font-weight: 600; margin: 10px 0 4px; }
+  .hint { color: var(--muted); font-size: 13px; font-weight: 400; }
+  input[type=text], input[type=number], textarea {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+    font: inherit; background: #fff; color: var(--ink); }
+  textarea { min-height: 90px; font-family: Consolas, monospace; font-size: 13px; }
+  .row { display: flex; gap: 10px; align-items: flex-end; }
+  .row > * { flex: 1; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { border: 1px solid var(--line); background: var(--accent-soft); color: var(--accent);
+          border-radius: 999px; padding: 4px 11px; cursor: pointer; font: inherit; font-size: 13px; }
+  .chip:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px;
+                   padding: 11px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.primary:disabled { opacity: .55; cursor: wait; }
+  button.secondary { background: #fff; color: var(--accent); border: 1px solid var(--accent);
+                     border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
+  .big { width: 100%; font-size: 17px; padding: 14px; margin-top: 16px; }
+  .check { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; margin: 8px 0; }
+  .check input { margin-top: 4px; }
+  .msg { border-radius: 8px; padding: 10px 12px; margin-top: 12px; border-left: 4px solid; white-space: pre-wrap; }
+  .msg.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .msg.err { background: var(--err-bg); border-color: var(--err-line); }
+  .msg.ok { background: var(--ok-bg); border-color: var(--ok-line); }
+  .found { background: var(--code); border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 14px; }
+  .found code { word-break: break-all; font-size: 12px; }
+  #viewer { width: 100%; height: 380px; position: relative; border: 1px solid var(--line);
+            border-radius: 8px; background: #fff; }
+  .empty { display: flex; align-items: center; justify-content: center; height: 100%;
+           color: var(--muted); text-align: center; padding: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+  td { padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { color: var(--muted); width: 42%; }
+  td code { word-break: break-all; font-size: 12px; }
+  .dl { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; font-weight: 600; }
+  .muted { color: var(--muted); }
+  .file-drop { border: 2px dashed var(--line); border-radius: 8px; padding: 22px; text-align: center;
+               color: var(--muted); cursor: pointer; }
+  .file-drop.hover { border-color: var(--accent); background: var(--accent-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Cofactor 3D Builder</h1>
+    <p>Turn a cofactor or ligand into a 3D structure (SDF + PDB) for PyRx / AutoDock Vina. No coding needed.</p>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: input -->
+    <div class="card">
+      <h2><span class="step">1</span>Choose your molecule</h2>
+      <div class="tabs">
+        <button class="tab active" data-pane="name">Search by name</button>
+        <button class="tab" data-pane="smiles">Paste SMILES</button>
+        <button class="tab" data-pane="file">Upload file</button>
+      </div>
+
+      <div class="pane active" id="pane-name">
+        <label>Name <span class="hint">(searched on PubChem; the SMILES found includes the stereochemistry)</span></label>
+        <div class="row">
+          <input type="text" id="q" placeholder="e.g. flavin adenine dinucleotide">
+          <button class="secondary" style="flex:0 0 auto" id="btnFind">Search</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Quick picks. Always check that the result is the form you want:</div>
+        <div class="chips" id="chips"></div>
+        <div id="foundBox"></div>
+      </div>
+
+      <div class="pane" id="pane-smiles">
+        <label>SMILES <span class="hint">(best: copy the SMILES from PubChem, which includes @ / @@ stereo)</span></label>
+        <textarea id="smiles" placeholder="Paste one SMILES here"></textarea>
+      </div>
+
+      <div class="pane" id="pane-file">
+        <label>File <span class="hint">(.sdf, .mol, .mol2, .smi or .txt, e.g. a 2D SDF downloaded from PubChem)</span></label>
+        <div class="file-drop" id="drop">Click to choose a file, or drag it here
+          <div id="fileName" style="margin-top:6px;font-weight:600;color:var(--ink)"></div></div>
+        <input type="file" id="file" accept=".sdf,.sd,.mol,.mol2,.smi,.txt" hidden>
+      </div>
+
+      <h2 style="margin-top:22px"><span class="step">2</span>Name and settings</h2>
+      <div class="row">
+        <div><label>File name</label><input type="text" id="name" placeholder="e.g. FAD"></div>
+        <div style="flex:0 0 110px"><label>PDB code <span class="hint">(3 letters)</span></label>
+          <input type="text" id="resname" maxlength="3" value="LIG"></div>
+      </div>
+      <label>Save to folder</label>
+      <input type="text" id="outdir" value="__DEFAULT_OUT__">
+
+      <details>
+        <summary>Advanced settings</summary>
+        <div class="row">
+          <div><label>Conformers to try</label><input type="number" id="nconf" value="10" min="1" max="100"></div>
+          <div><label>Random seed</label><input type="number" id="seed" value="42"></div>
+        </div>
+        <p class="hint">The tool builds several 3D shapes, optimises each with MMFF94 and keeps the lowest-energy one.
+          Keeping the same seed gives the same result every time, which makes it reproducible for your Methods section.</p>
+        <label class="check"><input type="checkbox" id="saveAll"> Also save all conformers in one SDF (for ensemble docking)</label>
+        <label class="check"><input type="checkbox" id="allowUndef"> Allow undefined stereo <span class="hint">(only if you know it doesn't matter, e.g. n-alkanes)</span></label>
+      </details>
+
+      <button class="primary big" id="btnGo">Make 3D structure</button>
+      <div id="msgBox"></div>
+    </div>
+
+    <!-- RIGHT: result -->
+    <div class="card">
+      <h2><span class="step">3</span>Result</h2>
+      <div id="viewer"><div class="empty">Your 3D structure will appear here.<br>Drag to rotate, scroll to zoom.</div></div>
+      <div id="resultBox"></div>
+    </div>
+  </div>
+
+  <details class="card" style="margin-top:20px">
+    <summary>Tips for docking cofactors (please read once)</summary>
+    <ul>
+      <li><b>Stereochemistry matters.</b> Sugars in FAD/NAD(P)H must be D-ribose/D-ribityl. A SMILES without @/@@ gives a random isomer. The tool stops and warns you when this happens.</li>
+      <li><b>Oxidised vs reduced.</b> Check the formula: FAD is C27H33N9O15P2; FADH2 has 2 more H. For FADH2 the correct form is the 1,5-dihydro flavin (H on N1 and N5).</li>
+      <li><b>Use SDF for PyRx.</b> SDF keeps bond orders; PDB does not. Import the SDF into PyRx (Open Babel), minimise, then "Convert to AutoDock Ligand (pdbqt)".</li>
+      <li><b>Metal cofactors</b> (heme, Fe–S, the AlkB di-iron centre) cannot be built this way. Take them from a crystal structure in the PDB.</li>
+      <li><b>Charges:</b> PubChem SMILES are usually neutral (phosphates as –OH). Vina scoring does not use partial charges, but state the protonation state you used in your Methods.</li>
+      <li>Every run is recorded in <code>generation_log.csv</code> in the output folder (SMILES, seed, force field, energy), so you can write the Methods later.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let current = { kind: "name", text: "", filename: "", cid: null, title: "" };
+let viewer = null, last = null;
+
+// tabs
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x === t));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === "pane-" + t.dataset.pane));
+  current.kind = t.dataset.pane;
+});
+
+// quick picks (names only; structures come from PubChem)
+const picks = [
+  ["FAD", "flavin adenine dinucleotide"], ["FADH2", "FADH2"], ["FMN", "flavin mononucleotide"],
+  ["FMNH2", "FMNH2"], ["NAD+", "NAD"], ["NADH", "NADH"], ["NADP+", "NADP"], ["NADPH", "NADPH"],
+  ["Coenzyme A", "coenzyme A"], ["n-C16", "hexadecane"], ["n-C22", "docosane"], ["n-C28", "octacosane"]
+];
+picks.forEach(([label, q]) => {
+  const b = document.createElement("button");
+  b.className = "chip"; b.textContent = label;
+  b.onclick = () => { $("q").value = q; $("name").value = label.replace("+", "plus"); lookup(); };
+  $("chips").appendChild(b);
+});
+
+function showMsg(el, cls, text) { el.innerHTML = ""; if (!text) return;
+  const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; el.appendChild(d); }
+
+async function post(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return r.json();
+}
+
+async function lookup() {
+  const q = $("q").value.trim(); if (!q) return;
+  $("foundBox").innerHTML = '<div class="found">Searching PubChem…</div>';
+  current.text = ""; current.cid = null;
+  const res = await post("/api/lookup", { name: q });
+  if (!res.cid) { showMsg($("foundBox"), "err", res.error || "Not found."); return; }
+  current.text = res.smiles; current.cid = res.cid; current.title = res.title;
+  if (!$("name").value) $("name").value = res.title;
+  $("foundBox").innerHTML = `<div class="found"><b>Found:</b> ${esc(res.title)} &nbsp;·&nbsp; ${esc(res.formula)}
+    &nbsp;·&nbsp; <a href="https://pubchem.ncbi.nlm.nih.gov/compound/${res.cid}" target="_blank">PubChem CID ${res.cid}</a>
+    <div style="margin-top:6px"><code>${esc(res.smiles)}</code></div>
+    <div class="hint" style="margin-top:6px">Open the PubChem link and check this is the right form before docking.</div></div>`;
+}
+$("btnFind").onclick = lookup;
+$("q").addEventListener("keydown", e => { if (e.key === "Enter") lookup(); });
+$("q").addEventListener("input", () => { current.text = ""; current.cid = null; $("foundBox").innerHTML = ""; });
+
+// file upload
+const drop = $("drop"), fileInput = $("file");
+drop.onclick = () => fileInput.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("hover"); };
+drop.ondragleave = () => drop.classList.remove("hover");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("hover"); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); };
+fileInput.onchange = () => { if (fileInput.files[0]) readFile(fileInput.files[0]); };
+function readFile(f) {
+  const r = new FileReader();
+  r.onload = () => { current.fileText = r.result; current.filename = f.name; $("fileName").textContent = f.name;
+    if (!$("name").value) $("name").value = f.name.replace(/\.[^.]+$/, ""); };
+  r.readAsText(f);
+}
+
+// generate
+$("btnGo").onclick = () => generate(true);
+async function generate(save) {
+  const kind = current.kind;
+  let text = kind === "name" ? current.text : kind === "smiles" ? $("smiles").value : current.fileText;
+  if (kind === "name" && !text && $("q").value.trim()) { await lookup(); text = current.text; }
+  if (!text) { showMsg($("msgBox"), "err", kind === "file" ? "Please choose a file first." :
+      kind === "name" ? "Please search for a name first." : "Please paste a SMILES first."); return; }
+  const btn = $("btnGo"); btn.disabled = true; btn.textContent = "Building 3D structure…";
+  showMsg($("msgBox"), "", "");
+  try {
+    const res = await post("/api/generate", {
+      kind: kind === "name" ? "name" : kind, text, filename: current.filename || "",
+      cid: kind === "name" ? current.cid : null, title: current.title,
+      name: $("name").value.trim(), resname: $("resname").value.trim(), out_dir: $("outdir").value.trim(),
+      n_conf: +$("nconf").value, seed: +$("seed").value,
+      save_all: $("saveAll").checked, allow_undefined: $("allowUndef").checked, save
+    });
+    if (!res.ok) { showMsg($("msgBox"), res.error.startsWith("STEREO:") ? "warn" : "err", res.error.replace(/^STEREO: /, "")); return; }
+    last = res; render(res);
+    if (save) showMsg($("msgBox"), "ok", "Done! Saved:\n" + res.saved.join("\n"));
+  } catch (e) {
+    showMsg($("msgBox"), "err", "Lost contact with the tool. Is the black 'Cofactor 3D' window still open?");
+  } finally { btn.disabled = false; btn.textContent = "Make 3D structure"; }
+}
+
+// ?demo=<name> previews a molecule without saving (used for screenshots)
+const demo = new URLSearchParams(location.search).get("demo");
+if (demo) { $("q").value = demo; $("name").value = demo; lookup().then(() => generate(false)); }
+
+function render(res) {
+  const v = $("viewer"); v.innerHTML = "";
+  if (window.$3Dmol) {
+    viewer = $3Dmol.createViewer(v, { backgroundColor: "white" });
+    viewer.addModel(res.sdf, "sdf");
+    viewer.setStyle({}, { stick: { radius: 0.16 }, sphere: { scale: 0.22 } });
+    viewer.zoomTo(); viewer.zoom(0.85); viewer.render();
+  } else {
+    v.innerHTML = '<div class="empty">3D preview needs internet (3Dmol.js).<br>Your files were still created.</div>';
+  }
+  let rows = Object.entries(res.info).map(([k, val]) =>
+    `<tr><td>${esc(k)}</td><td>${k === "SMILES used" ? "<code>" + esc(val) + "</code>" : esc(val)}</td></tr>`).join("");
+  let warn = res.warnings.map(w => `<div class="msg warn">${esc(w)}</div>`).join("");
+  $("resultBox").innerHTML = `
+    <div class="dl">
+      <button class="primary" onclick="dl('sdf')">Download SDF (for PyRx)</button>
+      <button class="secondary" onclick="dl('pdb')">Download PDB</button>
+      ${res.all_sdf ? '<button class="secondary" onclick="dl(\'all\')">All conformers</button>' : ""}
+      <button class="secondary" onclick="openFolder()">Open folder</button>
+    </div>${warn}<table>${rows}</table>`;
+}
+function dl(kind) {
+  const text = kind === "all" ? last.all_sdf : last[kind];
+  const name = last.file_stem + (kind === "all" ? "_all_conformers.sdf" : "." + kind);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "chemical/x-mdl-sdfile" }));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+function openFolder() { post("/api/open", { path: last ? last.out_dir : $("outdir").value }); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+</script>
+</body>
+</html>
