@@ -49,11 +49,31 @@ except (OSError, ValueError):
 
 
 # ---------------------------------------------------------------- PubChem
+# PubChem usage policy: no more than 5 requests per second per user/application.
+# https://pubchem.ncbi.nlm.nih.gov/docs/programmatic-access
+USER_AGENT = "Cofactor3DBuilder/1.0 (+https://github.com/viduminialwis/cofactor-3d-builder)"
+MIN_INTERVAL = 0.5  # seconds between PubChem requests (max 2 per second, well under the limit)
+_rate_lock = threading.Lock()
+_last_request = [0.0]
+_lookup_cache = {}  # repeat searches are answered locally instead of asking PubChem again
+
+
+def _wait_turn():
+    with _rate_lock:
+        wait = _last_request[0] + MIN_INTERVAL - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        _last_request[0] = time.monotonic()
+
+
 def fetch_json(url):
     """GET a JSON URL. PubChem sometimes refuses Python's HTTPS client (HTTP 503)
-    while accepting Windows PowerShell, so fall back to PowerShell on Windows."""
+    while accepting Windows PowerShell, so fall back to PowerShell on Windows.
+    Both routes identify this tool honestly and obey the rate limit above."""
+    _wait_turn()
     try:
-        with urllib.request.urlopen(url, timeout=25) as r:
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=25) as r:
             return json.loads(r.read().decode())
     except urllib.error.HTTPError as e:
         if e.code in (400, 404) or os.name != "nt":
@@ -61,8 +81,9 @@ def fetch_json(url):
     except (urllib.error.URLError, socket.timeout):
         if os.name != "nt":
             raise
+    _wait_turn()
     ps = ("$ProgressPreference='SilentlyContinue'; try { [Console]::OutputEncoding=[Text.Encoding]::UTF8; "
-          f"(Invoke-WebRequest -UseBasicParsing -TimeoutSec 25 -Uri '{url}').Content }} "
+          f"(Invoke-WebRequest -UseBasicParsing -TimeoutSec 25 -UserAgent '{USER_AGENT}' -Uri '{url}').Content }} "
           "catch { $c = [int]$_.Exception.Response.StatusCode; Write-Output ('HTTPERROR ' + $c) }")
     out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
                          capture_output=True, text=True, encoding="utf-8", timeout=60,
@@ -75,24 +96,29 @@ def fetch_json(url):
 
 def pubchem_lookup(name):
     """Return dict with cid, title, formula, smiles for a compound name."""
+    key = name.strip().lower()
+    if key in _lookup_cache:
+        return _lookup_cache[key]
     q = urllib.parse.quote(name.strip(), safe="")
     base = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/" + q + "/property/"
     last_err = "unknown error"
     # PubChem renamed IsomericSMILES -> SMILES in 2025; try both.
     for props in ("SMILES,MolecularFormula,Title", "IsomericSMILES,MolecularFormula,Title"):
-        for attempt in range(4):
+        for attempt in range(3):
             try:
                 data = fetch_json(base + props + "/JSON")
                 p = data["PropertyTable"]["Properties"][0]
                 smi = p.get("SMILES") or p.get("IsomericSMILES")
                 if not smi:
                     break
-                return {
+                result = {
                     "cid": p.get("CID"),
                     "title": p.get("Title", name),
                     "formula": p.get("MolecularFormula", ""),
                     "smiles": smi,
                 }
+                _lookup_cache[key] = result
+                return result
             except urllib.error.HTTPError as e:
                 if e.code == 404:
                     raise ValueError(f'PubChem has no compound called "{name}". '
@@ -101,10 +127,10 @@ def pubchem_lookup(name):
                     last_err = "bad request"
                     break  # try the other property name
                 last_err = f"PubChem is busy (HTTP {e.code})"
-                time.sleep(1.5 * (attempt + 1))
+                time.sleep(2 ** (attempt + 1))  # back off: 2, 4, 8 s
             except (urllib.error.URLError, socket.timeout) as e:
                 last_err = f"no internet connection to PubChem ({e})"
-                time.sleep(1.5 * (attempt + 1))
+                time.sleep(2 ** (attempt + 1))
     raise ValueError(f"Could not reach PubChem: {last_err}. Wait a minute and try again, "
                      "or paste the SMILES instead.")
 

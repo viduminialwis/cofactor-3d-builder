@@ -100,6 +100,17 @@ Example Methods sentence (please adapt it to your settings):
 | No 3D preview appears | The preview needs internet. Your SDF/PDB files are still created. |
 | Something else | The error is saved in `error_log.txt` in the tool folder. Please [open an issue](https://github.com/viduminialwis/cofactor-3d-builder/issues) and attach it. |
 
+## Data sources and acknowledgements
+
+- **PubChem (NCBI/NLM).** The name search uses the public [PUG-REST](https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest) web service. It retrieves only the CID, title, molecular formula and SMILES of the one compound you search for; no PubChem data is stored in or redistributed with this repository. The tool follows PubChem's [usage policy](https://pubchem.ncbi.nlm.nih.gov/docs/programmatic-access): at most 2 requests per second (the limit is 5), backing off when PubChem is busy, caching repeat searches, and sending a User-Agent that identifies this tool. This tool is independent and is **not affiliated with or endorsed by NCBI/NLM**; see the [NCBI policies and disclaimer](https://www.ncbi.nlm.nih.gov/home/about/policies/).
+  If you use structures obtained through this tool, please cite PubChem as it requests:
+  - Kim S, Chen J, Cheng T, et al. PubChem 2025 update. *Nucleic Acids Res.* 2025;53(D1):D1516–D1525. doi:[10.1093/nar/gkae1059](https://doi.org/10.1093/nar/gkae1059)
+  - Kim S, Thiessen PA, Cheng T, Yu B, Bolton EE. An update on PUG-REST: RESTful interface for programmatic access to PubChem. *Nucleic Acids Res.* 2018;46(W1):W563–W570. doi:[10.1093/nar/gky294](https://doi.org/10.1093/nar/gky294)
+
+  In your Methods, also give the **PubChem CID** of each compound you used; the tool shows it and writes it to `generation_log.csv`.
+- **RDKit**, the open-source cheminformatics toolkit (BSD licence): <https://www.rdkit.org>
+- **3Dmol.js**, for the 3D viewer (BSD licence): Rego N, Koes D. *Bioinformatics* 2015;31(8):1322–1324.
+
 ## Citation
 
 If this tool helps your research, please cite it using the **"Cite this repository"** button on this page (see [`CITATION.cff`](CITATION.cff)). Please also cite RDKit.
